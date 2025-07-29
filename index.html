@@ -2,36 +2,56 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>CRM Simples</title>
+  <title>CRM Moderno</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    input, textarea, select { width: 100%; padding: 5px; margin: 5px 0; }
-    button { padding: 8px 12px; margin-top: 10px; }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f4f6f8; color: #333; }
+    h1 { color: #222; }
+    .card, .filters, .actions { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; }
+    th { background: #f8f8f8; }
+    select, input[type="text"], input[type="date"], textarea {
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px;
+    }
+    button { background: #007bff; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+
+    .float-btn {
+      position: fixed; bottom: 30px; right: 30px; background: #28a745; border-radius: 50%; width: 60px; height: 60px;
+      display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+             background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; }
+    .modal-content {
+      background: #fff; padding: 20px; border-radius: 12px; width: 600px; max-width: 90%;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>CRM Simples</h1>
-  <form id="clienteForm">
-    <label>Nome: <input type="text" id="nome" required></label><br>
-    <label>Telefone: <input type="text" id="telefone"></label><br>
-    <label>Produto: <input type="text" id="produto"></label><br>
-    <label>Data da Compra: <input type="date" id="dataCompra"></label><br>
-    <label>Status: 
-      <select id="status">
+  <h1>CRM Moderno</h1>
+
+  <div class="filters">
+    <label>Status:
+      <select id="filtroStatus" onchange="renderizarTabela()">
+        <option value="">Todos</option>
         <option>Interessado</option>
         <option>Em negociação</option>
         <option>Fechou</option>
         <option>Sem interesse</option>
       </select>
-    </label><br>
-    <label>Último Contato: <input type="date" id="ultimoContato"></label><br>
-    <label>Observações: <textarea id="observacoes"></textarea></label><br>
-    <button type="submit">Salvar Cliente</button>
-  </form>
+    </label>
+    <label>Vendedor:
+      <input type="text" id="filtroCadastradoPor" oninput="renderizarTabela()" placeholder="Filtrar por quem cadastrou">
+    </label>
+  </div>
 
-  <table id="tabelaClientes">
+  <div class="actions">
+    <button onclick="exportarCSV()">📁 Exportar para Excel (.csv)</button>
+  </div>
+
+  <table>
     <thead>
       <tr>
         <th>Nome</th>
@@ -39,18 +59,62 @@
         <th>Produto</th>
         <th>Status</th>
         <th>Último Contato</th>
+        <th>Quem Cadastrou</th>
         <th>Ações</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="tabelaClientes"></tbody>
   </table>
 
+  <div class="float-btn" onclick="abrirModal()">+</div>
+
+  <div class="modal" id="modalForm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Novo Cliente</h2>
+        <button class="close-btn" onclick="fecharModal()">×</button>
+      </div>
+      <form id="clienteForm">
+        <label>Nome: <input type="text" id="nome" required></label><br>
+        <label>Telefone: <input type="text" id="telefone"></label><br>
+        <label>Produto: <input type="text" id="produto"></label><br>
+        <label>Data da Compra: <input type="date" id="dataCompra"></label><br>
+        <label>Status:
+          <select id="status">
+            <option>Interessado</option>
+            <option>Em negociação</option>
+            <option>Fechou</option>
+            <option>Sem interesse</option>
+          </select>
+        </label><br>
+        <label>Último Contato: <input type="date" id="ultimoContato"></label><br>
+        <label>Quem Cadastrou: <input type="text" id="cadastradoPor" required></label><br>
+        <label>Observações: <textarea id="observacoes"></textarea></label><br>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit">Salvar</button>
+          <button type="button" onclick="fecharModal()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
+    const modal = document.getElementById('modalForm');
     const form = document.getElementById('clienteForm');
-    const tabela = document.querySelector('#tabelaClientes tbody');
+    const tabela = document.getElementById('tabelaClientes');
+    const filtroStatus = document.getElementById('filtroStatus');
+    const filtroCadastradoPor = document.getElementById('filtroCadastradoPor');
 
     let clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
     renderizarTabela();
+
+    function abrirModal() {
+      modal.style.display = 'flex';
+    }
+    function fecharModal() {
+      modal.style.display = 'none';
+      form.reset();
+    }
 
     form.onsubmit = function(e) {
       e.preventDefault();
@@ -61,33 +125,67 @@
         dataCompra: dataCompra.value,
         status: status.value,
         ultimoContato: ultimoContato.value,
-        observacoes: observacoes.value
+        observacoes: observacoes.value,
+        cadastradoPor: cadastradoPor.value
       };
       clientes.push(cliente);
       localStorage.setItem('clientes', JSON.stringify(clientes));
       renderizarTabela();
-      form.reset();
+      fecharModal();
     };
 
     function renderizarTabela() {
       tabela.innerHTML = '';
+      const statusFiltro = filtroStatus.value.toLowerCase();
+      const vendedorFiltro = filtroCadastradoPor.value.toLowerCase();
+
       clientes.forEach((c, i) => {
-        const row = tabela.insertRow();
-        row.innerHTML = `
-          <td>${c.nome}</td>
-          <td>${c.telefone}</td>
-          <td>${c.produto}</td>
-          <td>${c.status}</td>
-          <td>${c.ultimoContato}</td>
-          <td><button onclick="deletar(${i})">Excluir</button></td>
-        `;
+        const statusOk = !statusFiltro || c.status.toLowerCase() === statusFiltro;
+        const vendedorOk = !vendedorFiltro || c.cadastradoPor.toLowerCase().includes(vendedorFiltro);
+
+        if (statusOk && vendedorOk) {
+          const row = tabela.insertRow();
+          row.innerHTML = `
+            <td>${c.nome}</td>
+            <td>${c.telefone}</td>
+            <td>${c.produto}</td>
+            <td>
+              <select onchange="editarStatus(${i}, this.value)">
+                <option ${c.status === 'Interessado' ? 'selected' : ''}>Interessado</option>
+                <option ${c.status === 'Em negociação' ? 'selected' : ''}>Em negociação</option>
+                <option ${c.status === 'Fechou' ? 'selected' : ''}>Fechou</option>
+                <option ${c.status === 'Sem interesse' ? 'selected' : ''}>Sem interesse</option>
+              </select>
+            </td>
+            <td>${c.ultimoContato}</td>
+            <td>${c.cadastradoPor}</td>
+            <td><button onclick="deletar(${i})">🗑</button></td>
+          `;
+        }
       });
+    }
+
+    function editarStatus(index, novoStatus) {
+      clientes[index].status = novoStatus;
+      localStorage.setItem('clientes', JSON.stringify(clientes));
     }
 
     function deletar(index) {
       clientes.splice(index, 1);
       localStorage.setItem('clientes', JSON.stringify(clientes));
       renderizarTabela();
+    }
+
+    function exportarCSV() {
+      const csv = ['Nome,Telefone,Produto,Status,Último Contato,Quem Cadastrou'];
+      clientes.forEach(c => {
+        csv.push(`${c.nome},${c.telefone},${c.produto},${c.status},${c.ultimoContato},${c.cadastradoPor}`);
+      });
+      const blob = new Blob([csv.join('\\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "clientes.csv";
+      link.click();
     }
   </script>
 </body>
