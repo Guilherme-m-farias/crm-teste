@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>CRM Simples</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    input, textarea, select { width: 100%; padding: 5px; margin: 5px 0; }
+    button { padding: 8px 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>CRM Simples</h1>
+  <form id="clienteForm">
+    <label>Nome: <input type="text" id="nome" required></label><br>
+    <label>Telefone: <input type="text" id="telefone"></label><br>
+    <label>Produto: <input type="text" id="produto"></label><br>
+    <label>Data da Compra: <input type="date" id="dataCompra"></label><br>
+    <label>Status: 
+      <select id="status">
+        <option>Interessado</option>
+        <option>Em negociação</option>
+        <option>Fechou</option>
+        <option>Sem interesse</option>
+      </select>
+    </label><br>
+    <label>Último Contato: <input type="date" id="ultimoContato"></label><br>
+    <label>Observações: <textarea id="observacoes"></textarea></label><br>
+    <button type="submit">Salvar Cliente</button>
+  </form>
+
+  <table id="tabelaClientes">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Telefone</th>
+        <th>Produto</th>
+        <th>Status</th>
+        <th>Último Contato</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById('clienteForm');
+    const tabela = document.querySelector('#tabelaClientes tbody');
+
+    let clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+    renderizarTabela();
+
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      const cliente = {
+        nome: nome.value,
+        telefone: telefone.value,
+        produto: produto.value,
+        dataCompra: dataCompra.value,
+        status: status.value,
+        ultimoContato: ultimoContato.value,
+        observacoes: observacoes.value
+      };
+      clientes.push(cliente);
+      localStorage.setItem('clientes', JSON.stringify(clientes));
+      renderizarTabela();
+      form.reset();
+    };
+
+    function renderizarTabela() {
+      tabela.innerHTML = '';
+      clientes.forEach((c, i) => {
+        const row = tabela.insertRow();
+        row.innerHTML = `
+          <td>${c.nome}</td>
+          <td>${c.telefone}</td>
+          <td>${c.produto}</td>
+          <td>${c.status}</td>
+          <td>${c.ultimoContato}</td>
+          <td><button onclick="deletar(${i})">Excluir</button></td>
+        `;
+      });
+    }
+
+    function deletar(index) {
+      clientes.splice(index, 1);
+      localStorage.setItem('clientes', JSON.stringify(clientes));
+      renderizarTabela();
+    }
+  </script>
+</body>
+</html>
